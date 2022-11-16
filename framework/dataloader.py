@@ -6,6 +6,7 @@ import torch
 from torch.utils.data import Dataset, DataLoader
 from torch.nn.utils.rnn import pad_sequence
 
+
 class RatMixData(object):
     # The class fits in those rating datas, with ratings ranging from different level of values.
     # For other datasets, such as CTR datasets, refer to other class.
@@ -21,16 +22,18 @@ class RatMixData(object):
 
     def split_matrix(self, mat, ratio=0.8):
         # TODO : whether only use the positive samples
-        mat = mat.tocsr()  #followed by rows(users)
-        m,n = mat.shape
+        mat = mat.tocsr()  # followed by rows(users)
+        m, n = mat.shape  # m=users n=items
         train_data_indices = []
         train_indptr = [0] * (m+1)
         test_data_indices = []
         test_indptr = [0] * (m+1)
+        # for each users
         for i in range(m):
+            # row[j] = (jth item index, ranking)
             row = [(mat.indices[j], mat.data[j]) for j in range(mat.indptr[i], mat.indptr[i+1])]
             train_idx = random.sample(range(len(row)), round(ratio * len(row)))
-            train_binary_idx = np.full(len(row), False)
+            train_binary_idx = np.full(len(row), False)  # [False] * rows
             train_binary_idx[train_idx] = True
             test_idx = (~train_binary_idx).nonzero()[0]
             for idx in train_idx:
@@ -57,7 +60,8 @@ class UserHisData(Dataset):
         return self.train.nnz
     
     def __getitem__(self, idx):
-        return self.train.row[idx].astype(np.int64), self.train.col[idx].astype(np.int64) + 1
+        return self.train.row[idx].astype(np.int64), self.train.col[idx].astype(np.int64) + 1  # why plus one?
+
 
 class UserTestData(Dataset):
     def __init__(self, train_mat, test_mat):
@@ -66,19 +70,25 @@ class UserTestData(Dataset):
         self.train, self.test = train_mat, test_mat
 
     def __len__(self):
-        return  self.train.shape[0]
+        return self.train.shape[0]
     
     def __getitem__(self, index):
         user_id = torch.LongTensor([index])
+        # index对应行的非零项列号
         user_his = self.train[index].nonzero()[1] + 1
-        
+
         start, end = self.test.indptr[index], self.test.indptr[index + 1]
+        # index对应行的非零项列号
         user_test = self.test.indices[start:end] + 1
-        user_rating = self.test.data[start:end] 
+        # index对应行的非零项值
+        user_rating = self.test.data[start:end]
 
         return user_id, torch.LongTensor(user_his), torch.LongTensor(user_test), torch.Tensor(user_rating)
 
+
 def pad_collate_valid(batch):
+    """填充tensor到相同长度
+    """
     (user, user_his, items, user_rating) = zip(*batch)
     return torch.LongTensor(user), pad_sequence(user_his, batch_first=True), pad_sequence(items, batch_first=True), pad_sequence(user_rating, batch_first=True)
 

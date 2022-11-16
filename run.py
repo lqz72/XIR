@@ -1,5 +1,5 @@
 from xml.dom import NotSupportedErr
-from framework.trainer import Trainer, Trainer_Resample, Trainer_MixNeg, Trainer_WithLast, Trainer_Re_WithLast
+from framework.trainer import Trainer, Trainer_Resample, Trainer_MixNeg, Trainer_Mixup, Trainer_Mixup_WithBPR, Trainer_WithLast, Trainer_Re_WithLast
 from framework.trainer_cache import Trainer_Cache
 import argparse
 
@@ -34,9 +34,10 @@ if __name__ == "__main__":
     parser.add_argument('--lambda', default=0.5, type=float, help='the coefficient to controll the cache')
     parser.add_argument('--alpha', default=1e-4, type=float, help='the lr of the streaming frequency estimation algorithm')
     parser.add_argument('--pop_mode', default=1, type=int, help='the mode of pop normalization')
+    parser.add_argument('--beta_alpha', default=0.5, type=float, help='the parameter of beta distribution')
+    parser.add_argument('--loss', default='CE', type=str, help='loss function')
 
     config = vars(parser.parse_args())
-
 
     if config['debias'] in [1,2,7]:
         trainer = Trainer(config)
@@ -46,6 +47,8 @@ if __name__ == "__main__":
         trainer = Trainer_MixNeg(config)
     elif config['debias'] in [8]:
         trainer = Trainer_Cache(config)
+    elif config['debias'] in [10]:
+        trainer = Trainer_Mixup(config)
     else:
         raise NotSupportedErr
     
